@@ -14,7 +14,7 @@ import warnings
 import numpy as np
 
 
-def param_LC_Brownian_motion(tt, yy, T):
+def param_LC_W(tt, yy, T):
     """The classical Levy-Ciesielsky construction of the Wiener process is used 
     as a parametric expansion as follows:
 

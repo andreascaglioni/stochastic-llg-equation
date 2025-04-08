@@ -1,5 +1,5 @@
 from copy import deepcopy
-from pod_tps.utils import get_H1_matrix, get_L2_matrix
+from src.utils import get_H1_matrix, get_L2_matrix
 from basix.ufl import element
 from dolfinx import default_real_type
 from dolfinx.fem import Function, functionspace

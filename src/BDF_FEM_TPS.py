@@ -11,7 +11,7 @@ from dolfinx import la
 from dolfinx.fem import Constant, Function, form
 from ufl import dx, grad, inner, cross, dot
 from dolfinx.fem.petsc import assemble_matrix_nest, assemble_vector_nest
-from pod_tps.inf_sup import compute_inf_sup
+from src.inf_sup import compute_inf_sup
 
 
 def coeffs_bdf(k):
@@ -298,7 +298,4 @@ def BDF_FEM_TPS(
         mm[j].x.array[:] = m_new.x.array
         vv[j - 1].x.array[:] = v.x.array
         ll[j - 1].x.array[:] = lam.x.array
-    if return_inf_sup:
-        return mm, vv, ll, inf_sup_t
-    else:
-        return mm, vv, ll
+    return mm, vv, ll, inf_sup_t

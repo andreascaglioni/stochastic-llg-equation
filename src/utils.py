@@ -1,3 +1,17 @@
+from math import sqrt
+import numpy as np
+from scipy.linalg import eigh
+#
+from dolfinx.io import XDMFFile
+from dolfinx.fem import Function, form, create_interpolation_data
+from ufl import dx, grad, inner, TrialFunction, TestFunction
+from dolfinx.fem.petsc import assemble_matrix
+#
+
+
+def compute_rate(xx, yy):
+    return -np.log(yy[1:] / yy[:-1]) / np.log(xx[1:] / xx[:-1])
+
 def export_xdmf(msh, f, tt=np.array([]), filename="plot.xdmf"):
     xdmf = XDMFFile(msh.comm, filename, "w")
     xdmf.write_mesh(msh)
@@ -18,8 +32,8 @@ def export_xdmf(msh, f, tt=np.array([]), filename="plot.xdmf"):
 
 
 def get_H1_matrix(V3):
-    v_trial = ufl.TrialFunction(V3)
-    v_test = ufl.TestFunction(V3)
+    v_trial = TrialFunction(V3)
+    v_test = TestFunction(V3)
     H1_product_form = form(
         (inner(v_trial, v_test) + inner(grad(v_trial), grad(v_test))) * dx
     )
@@ -33,8 +47,8 @@ def get_H1_matrix(V3):
 
 
 def get_L2_matrix(V):
-    l_trial = ufl.TrialFunction(V)
-    l_test = ufl.TestFunction(V)
+    l_trial = TrialFunction(V)
+    l_test = TestFunction(V)
     L2_product_form = form(inner(l_test, l_trial) * dx)
     L2_product = assemble_matrix(L2_product_form)
     L2_product.assemble()

@@ -16,8 +16,8 @@ def W_fun(tt, yy):
 
 
 def m0(x):  # IC
-    m00 = 0.5 * x[0]
-    m01 = 0.5 * x[1]
+    m00 = 0.9 * x[0]
+    m01 = 0.9 * x[1]
     # m00 = 0.0 * x[0]
     # m01 = 0.0 * x[1]
     m02 = np.sqrt(1.0 - np.square(m00) - np.square(m01))
@@ -25,12 +25,12 @@ def m0(x):  # IC
 
 
 def g(x):  # space component noise
-    # sqr = np.square(x[0]) + np.square(x[1])
-    # C = 0.9
-    # g0 = C * np.sin(0.5 * pi * sqr) * x[0]
-    # g1 = C * np.sin(0.5 * pi * sqr) * x[1]
-    g0 = x[0]
-    g1 = 0.*x[1]
+    sqr = np.square(x[0]) + np.square(x[1])
+    C = 0.6
+    g0 = C * np.sin(0.5 * pi * sqr) * x[0]
+    g1 = C * np.sin(0.5 * pi * sqr) * x[1]
+    # g0 = x[0]
+    # g1 = 0.*x[1]
     g2 = np.sqrt(1.0 - np.square(g0) - np.square(g1))
     return np.stack((g0, g1, g2))
 

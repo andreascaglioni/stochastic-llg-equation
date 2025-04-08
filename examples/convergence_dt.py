@@ -76,7 +76,7 @@ for i, dt in enumerate(ddt):
     # Compute
     mm, _, _, is_tt = BDF_FEM_TPS(data)
 
-    # Compute and store #dofs and error
+    # Error wrt reference
     err_tx[i], err_tt = error_space_time(
         mm_ref,
         tt_ref,
@@ -92,6 +92,11 @@ for i, dt in enumerate(ddt):
     np.savetxt(join(dir_save, f"error_tt_{i}.csv"), err_tt, delimiter=",")
     export_xdmf(msh, mm, tt, join(dir_save, "m_" + str(i) + ".xdmf"))
 
+    # Plot seqauecne of time errors
+    plt.figure("error_t")
+    plt.semilogy(tt_ref, err_tt, "-", label="dt = " + float_f(dt))
+    
+
 # POST-PROCESS
 # print
 print("h (fixed): ", h)
@@ -106,16 +111,18 @@ np.savetxt(join(dir_save, "conv_data.csv"), A, delimiter=",", header="h, dt, err
 
 # Plot
 plt.figure("error")
-plt.title("L^2(0, T, H^1(D)) Error")
+plt.title("L^inf(0, T, H^1(D)) Error")
 plt.loglog(ddt, err_tx, ".-", label="error")
-
 C = err_tx[0] / (ddt[0])
 plt.loglog(ddt, C * ddt, "k-", label="C*dt")
-
-C = err_tx[0] / (ddt[0]**rate[-1])
-plt.loglog(ddt, C * ddt**rate[-1], "k--", label="C*dt^"+float_f(rate[-1]))
-
 plt.legend()
 plt.xlabel("dt")
 plt.savefig(join(dir_save, "conv_error.png"))
+
+plt.figure("error_t")
+plt.xlabel("t")
+plt.title("H^1(D) error over time steps")
+plt.legend()
+plt.savefig(join(dir_save, "error_t.png"))
+
 plt.show()

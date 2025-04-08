@@ -1,6 +1,8 @@
 from math import sqrt
 import numpy as np
 from scipy.linalg import eigh
+from scipy.interpolate import interp1d
+
 #
 from dolfinx.io import XDMFFile
 from dolfinx.fem import Function, form, create_interpolation_data
@@ -10,7 +12,8 @@ from dolfinx.fem.petsc import assemble_matrix
 
 
 def compute_rate(xx, yy):
-    return -np.log(yy[1:] / yy[:-1]) / np.log(xx[1:] / xx[:-1])
+    return np.log(yy[1:] / yy[:-1]) / np.log(xx[1:] / xx[:-1])
+
 
 def export_xdmf(msh, f, tt=np.array([]), filename="plot.xdmf"):
     xdmf = XDMFFile(msh.comm, filename, "w")
@@ -78,8 +81,9 @@ def compute_data_nonmatch_interpol(V_exa, V):
 
 def error_space_time(
     u_exa,
-    U,
-    dtdt,
+    tt_exa,
+    U_in,
+    tt,
     ip_matrix,
     matching_x_spaces=True,
     data_nonmatch=None,
@@ -89,7 +93,8 @@ def error_space_time(
 
     Args:
         u_exa (list[Function]): First function (the exat or reference one)
-        U (list[Function]): Second function (the approximation of u_exa)
+        tt_exa (numpy.array[float]): Array of time steps of u_exa.
+        U_in (list[Function]): Second function (the approximation of u_exa)
         dtdt (numpy.array[float]): Array of time step sizes. NB its length is ff.size-1!
         ip_matrix (numpy.array[float]): Square matrix represnting inner product in space of exact solution.
         matching_x_spaces (bool): If True, the spaces for the x variable of u_exa and U_in are matching. Defaults to True.
@@ -99,29 +104,51 @@ def error_space_time(
         tuple[float, numpy.ndarray[float]]: Tuple of: The (non-negative) error; The error in x at each time step.
     """
 
-    V_exa = u_exa[0]._V
-    V = U[0]._V
+    # Ensure time steps sizes are coherent
+    assert len(u_exa) == tt_exa.size
+    assert len(U_in) == tt.size
+    assert tt_exa.size >= tt.size
 
-    # in spaces are NOT matching, need additional data
+    # If spaces are NOT matching, need additional data for interpolation of U into the space of u_exa
+    V_exa = u_exa[0]._V
+    V = U_in[0]._V
     if not matching_x_spaces:
         if data_nonmatch is None:  # if no data is provided, compute it now
             data_nonmatch = compute_data_nonmatch_interpol(V_exa, V)
         cells, interpolation_data = data_nonmatch
 
-    # Compute u_exa-U by possibly interpolating U in FE space u_exa, then use it to compute the error in space.
-    err_tt = np.zeros(len(u_exa))
-    f = Function(V_exa)
-    for i in range(len(u_exa)):
-        if not matching_x_spaces:
-            f.interpolate_nonmatching(U[i], cells, interpolation_data)
-        elif U[0]._V == u_exa[0]._V:
-            f.x.array[:] = U[i].x.array
-        else:  # spaces are matching but not the same
-            f.interpolate(U[i])
-        f.x.array[:] -= u_exa[i].x.array
-        err_tt[i] = ip_norm(f.x.array, A=ip_matrix)
+    # Guarantee that U and u_exa are defined on the same time steps tt_exa
+    tt_different = tt.size < tt_exa.size or (
+        tt.size == tt_exa.size and np.linalg.norm(tt - tt_exa) > 1.0e-10
+    )
+    if tt_different:
+        U_intdata = np.array([U_in[i].x.array for i in range(len(U_in))])
+        interpolant_U_t = interp1d(tt, U_intdata, kind="linear", axis=0)
+        U_dofs = interpolant_U_t(tt_exa)
+    else:
+        U_dofs = U_in
 
-    # Compute error in time
+    # Compute space error for each time step (interpolate U(t_i) in V_exa)
+    f_Vexa = Function(V_exa)
+    f_V = Function(V)
+    err_tt = np.zeros(len(u_exa))
+    for i in range(len(u_exa)):
+        # Guarantee that U and U_exa are in same FE space
+        if not matching_x_spaces:
+            f_V.x.array[:] = U_dofs[i]
+            f_Vexa.interpolate_nonmatching(f_V, cells, interpolation_data)
+        elif V == V_exa:  # the FE spaces are the same
+            f_Vexa.x.array[:] = U_dofs[i]
+        else:  # the FE spaces are matching but not the same
+            f_V.x.array[:] = U_dofs[i]
+            f_Vexa.interpolate(f_V)
+       
+        # Compute error in FE space
+        f_Vexa.x.array[:] -= u_exa[i].x.array
+        err_tt[i] = ip_norm(f_Vexa.x.array, A=ip_matrix)
+
+    # Compute sapce+time error
+    dtdt = tt_exa[1:] - tt_exa[:-1]
     if t_error_type == "L2":
         err = sqrt(np.sum(dtdt * (err_tt[1:] ** 2)))
     elif t_error_type == "L1":
@@ -133,6 +160,12 @@ def error_space_time(
 
     return err, err_tt
 
+
 def inverse_sqrt(A):
     e_val, e_vec = eigh(A)
     return e_vec @ np.diag(1.0 / np.sqrt(e_val)) @ e_vec.T
+
+
+def float_f(x):
+    """Format float variables."""
+    return f"{x:.4e}"

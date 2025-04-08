@@ -1,8 +1,6 @@
-"""as example 1, but 
-- remove mesh and mesh dependent quantitities to set them at run-time.
-- time step tau = 5.e-3"""
+"""Data for h-converngece TPS. Data related to finite elements from mesh and 
+discretization is removed. The data is set with function set_FE_data() at run time."""
 
-from math import pi
 import numpy as np
 from mpi4py import MPI
 from src.parametric_W import param_LC_W
@@ -22,11 +20,14 @@ def m0(x):  # IC
 
 
 def g(x):  # space component noise
-    sqr = np.square(x[0]) + np.square(x[1])
-    C = 0.9
-    g0 = C * np.sin(0.5 * pi * sqr) * x[0]
-    g1 = C * np.sin(0.5 * pi * sqr) * x[1]
-    g2 = np.sqrt(1.0 - np.square(g0) - np.square(g1))
+    # sqr = np.square(x[0]) + np.square(x[1])
+    # C = 0.9
+    # g0 = C * np.sin(0.5 * pi * sqr) * x[0]
+    # g1 = C * np.sin(0.5 * pi * sqr) * x[1]
+    # g2 = np.sqrt(1.0 - np.square(g0) - np.square(g1))
+    g0 = 0.*x[0]
+    g1 = 1. + 0.*x[1]
+    g2 = 0.*x[1]
     return np.stack((g0, g1, g2))
 
 

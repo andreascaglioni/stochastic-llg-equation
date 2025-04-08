@@ -1,4 +1,8 @@
-"""Convergence of TPS with respect to the time step size."""
+"""Convergence of the (high fidelity) tangent plane scheme as the mesh is refined. The time step is always the same and must be fine enough to have stability (CFL condition tau < C h) for the finest mesh.
+
+We use this as a supporting example for Example 7bis: There we measure the convergence of the ROM-TPS towards the HF model, for various values of the mesh size.
+The aim is for this error to be smaller than the error between the HF model and the reference solution (computed e.g. on a FINER mesh).
+"""
 
 from math import sqrt
 import os
@@ -34,7 +38,7 @@ dir_save = join("simulations", "BDF_FEM_" + date + "/")
 os.makedirs(dir_save)
 print("using dir_save:", dir_save)
 shutil.copy(__file__, join(dir_save, "script.py"))
-from data.test_data_4_conv_h import data as data_nomsh  # noqa: E402
+from data.data_conv_h import data as data_nomsh  # noqa: E402
 
 shutil.copy(join("data", "test_data_4_conv_h.py"), join(dir_save, "data.py"))
 

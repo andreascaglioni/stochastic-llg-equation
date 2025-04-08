@@ -1,7 +1,7 @@
-"""Convergence of the (high fidelity) tangent plane scheme as the mesh is refined. The time step is always the same and must be fine enough to have stability (CFL condition tau < C h) for the finest mesh.
-
-We use this as a supporting example for Example 7bis: There we measure the convergence of the ROM-TPS towards the HF model, for various values of the mesh size.
-The aim is for this error to be smaller than the error between the HF model and the reference solution (computed e.g. on a FINER mesh).
+"""Convergence of the TPS (tangent plane scheme) with respect to both mesh size h and time step size dt.
+Time step and mesh size must satisfy the condition tau < C h to guarantee stability (CFL condition).
+The expected convergence rate of the L^{infty}(0,T, H^1(D)) error is O(h + dt) or
+\Vert m - m_{h, \tau}\Vert_{L^{infty}(0,T, H^1(D))} \leq C (h+\tau)
 """
 
 from math import sqrt
@@ -34,26 +34,24 @@ np.random.seed(0)
 
 # PARAMETERS & DATA
 date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-dir_save = join("simulations", "BDF_FEM_" + date + "/")
+dir_save = join("simulations", "BDF_FEM_conv_h_" + date + "/")
 os.makedirs(dir_save)
-print("using dir_save:", dir_save)
-shutil.copy(__file__, join(dir_save, "script.py"))
-from data.test_data_4_conv_h import data as data_nomsh  # noqa: E402
-
-shutil.copy(join("data", "test_data_4_conv_h.py"), join(dir_save, "data.py"))
-
+print("Saving results in:", dir_save)
+shutil.copy(__file__, join(dir_save, "script.txt"))
+from data.data_conv_h import data as data_nomsh  # noqa: E402
+shutil.copy(join("data", "data_conv_h.py"), join(dir_save, "data.txt"))
 tt = data_nomsh["tt"]
-W_fun = data_nomsh["W_fun"]
-idxs_meshes = np.arange(1, 5)
+idxs_meshes = np.arange(1, 6)
 print("Indices meshes:", idxs_meshes, "(last used as reference)")
+print("")
 n_MC = 1
 dim_y = 1
 
 # COMPUTE
 dtdt = tt[1:] - tt[:-1]
 MC_sample = np.random.randn(dim_y)
-data_nomsh["W"] = data_nomsh["W_fun"](tt, MC_sample)
 np.savetxt(join(dir_save, "MC_sample.csv"), MC_sample, delimiter=",")
+data_nomsh["W"] = data_nomsh["W_fun"](tt, MC_sample)
 
 print("Sample reference solution")
 ref_mesh_filename = join("data", "meshes", f"disk_2D_{idxs_meshes[-1]}.xdmf")
@@ -66,6 +64,7 @@ print(
     "Min dt:",
     float_f(np.amin(tt[1:] - tt[:-1])),
 )
+print("")
 data_ref = set_FE_data(msh_ref, data_nomsh)
 ip_V3_ref = data_ref["ip_V3"]
 mm_ref, _, _, is_tt_ref = BDF_FEM_TPS(
@@ -73,24 +72,28 @@ mm_ref, _, _, is_tt_ref = BDF_FEM_TPS(
     return_inf_sup=False,
     verbose=int(tt.size / 5),  # log 5 times
 )
-print("Dimension ref. V:", data_ref["ip_V"].shape[0])
-xdmf = XDMFFile(comm, join(dir_save, "ref.xdmf"), "w")
+export_xdmf(msh_ref, mm_ref, tt, join(dir_save, "m_ref.xdmf"))
 
 print("Convergence Test:")
 n_dofs_V = np.zeros(len(idxs_meshes), dtype=int)
 err_tx = np.zeros(len(idxs_meshes))
-ss = np.zeros_like(err_tx)
 hh = np.zeros_like(err_tx)
 ddt = np.zeros_like(err_tx)
 for i, msh_idx in enumerate(idxs_meshes):
+    # Load mesh and compute mesh data
     mesh_filename = join("data", "meshes", f"disk_2D_{msh_idx}.xdmf")
     with XDMFFile(comm, mesh_filename, "r") as xdmf:
         msh = xdmf.read_mesh(name="Grid")
     data = set_FE_data(msh, data_nomsh)
-    mm, _, _, is_tt = BDF_FEM_TPS(data, verbose=int(tt.size / 5))
-
-    # Compute and store #dofs and error
+    hh[i] = sqrt(np.amin(mea(msh)))
+    ddt[i] = data["tt"][1] - data["tt"][0]
     n_dofs_V[i] = data["ip_V"].shape[0]
+    print("Compute discrete solution h:", float_f(hh[i]), "dt:", float_f(ddt[i]))
+    
+    # Solve
+    mm, _, _, is_tt = BDF_FEM_TPS(data)
+
+    # Compute error
     data_nonmatch = compute_data_nonmatch_interpol(data_ref["V3"], data["V3"])
     err_tx[i], err_tt = error_space_time(
         mm_ref,
@@ -101,10 +104,8 @@ for i, msh_idx in enumerate(idxs_meshes):
         data_nonmatch=data_nonmatch,
         t_error_type="Linf",
     )
-    hh[i] = sqrt(np.amin(mea(msh)))
-    ddt[i] = data["tt"][1] - data["tt"][0]
-    print("Dimension V:", n_dofs_V[i], "h:", float_f(hh[i]))
-    print("L^2(0, T, H^1(D)) error:", float_f(err_tx[i]))
+    
+    print("L^{\infty}(0, T, H^1(D)) error:", float_f(err_tx[i]))
     print("")
 
     # Export sequence time errors
@@ -117,7 +118,7 @@ print("#V:", n_dofs_V, "(Reference:", data_ref["ip_V"].shape[0], ")")
 print("h: ", hh)
 print("dt:", ddt)
 print("Error L^inf(H1):", err_tx)
-rate = compute_rate(hh + ddt, err_tx)
+rate = compute_rate(hh, err_tx)
 print("Convergence rate:", rate)
 
 # Export data convergence
@@ -126,11 +127,13 @@ np.savetxt(join(dir_save, "conv_data.csv"), A, delimiter=",", header="#V, h, dt,
 
 # Plot
 plt.figure("error")
-plt.title("L^2(0, T, H^1(D)) Error")
-plt.loglog(hh + ddt, err_tx, ".-", label="error")
-C = err_tx[0] / (hh[0] + dtdt[0])
-plt.loglog(hh + ddt, C * (hh + ddt) ** rate, "k-", label="C*(h+dt)")
+plt.title("L^{\infty}(0, T, H^1(D)) Error")
+plt.loglog(hh, err_tx, ".-", label="error")
+C = err_tx[0] /hh[0]
+plt.loglog(hh, C * hh, "k-", label="C*h)")
+C = err_tx[0] / (hh[0]**rate[-1])
+plt.loglog(hh, C * hh**rate[-1], "k--", label="C*h^"+float_f(rate[-1]))
 plt.legend()
-plt.xlabel("# dofs")
-# plt.savefig(join(dir_save, "conv_error.png"))
+plt.xlabel("h")
+plt.savefig(join(dir_save, "conv_error.png"))
 plt.show()

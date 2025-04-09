@@ -1,4 +1,7 @@
 # stochastic-llg-equation
+
+![Image](https://github.com/user-attachments/assets/2beba6ae-fa3b-482e-86e9-ba09b71bd37b)
+
 Approximation of the sample paths of the Stochastic Landau-Lifshitz-Gilbert equation from dynamic micromagnetics.
 
 ## Table of Contents

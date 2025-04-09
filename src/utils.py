@@ -126,7 +126,7 @@ def error_space_time(
         interpolant_U_t = interp1d(tt, U_intdata, kind="linear", axis=0)
         U_dofs = interpolant_U_t(tt_exa)
     else:
-        U_dofs = U_in
+        U_dofs = np.array([U_in[i].x.array for i in range(len(U_in))])
 
     # Compute space error for each time step (interpolate U(t_i) in V_exa)
     f_Vexa = Function(V_exa)

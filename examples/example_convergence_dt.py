@@ -58,7 +58,7 @@ data["W"] = W_ref
 data["tt"] = tt_ref
 data["dtdt"] = tt_ref[1:] - tt_ref[:-1]
 print("dt:", float_f(dt_ref), "h:", float_f(h))
-mm_ref, _, _, is_tt_ref = BDF_FEM_TPS(data, verbose=int(tt_ref.size / 5))
+mm_ref, _, _, _ = BDF_FEM_TPS(data, verbose=int(tt_ref.size / 5))
 xdmf = XDMFFile(comm, join(dir_save, "ref.xdmf"), "w")
 print("")
 

@@ -1,6 +1,7 @@
-"""Data for h-converngece TPS. Data related to finite elements from mesh and 
+"""Data for h-converngece TPS. Data related to finite elements from mesh and
 discretization is removed. The data is set with function set_FE_data() at run time."""
 
+from math import pi
 import numpy as np
 from mpi4py import MPI
 from src.parametric_W import param_LC_W
@@ -9,8 +10,10 @@ from src.parametric_W import param_LC_W
 alpha = 1.4
 T = 1
 
+
 def W_fun(t, y):  # Random field (wiener process) as a function of time and parameter
     return param_LC_W(t, y, T)
+
 
 def m0(x):  # IC
     m00 = 0.9 * x[0]
@@ -20,14 +23,14 @@ def m0(x):  # IC
 
 
 def g(x):  # space component noise
-    # sqr = np.square(x[0]) + np.square(x[1])
-    # C = 0.9
-    # g0 = C * np.sin(0.5 * pi * sqr) * x[0]
-    # g1 = C * np.sin(0.5 * pi * sqr) * x[1]
-    # g2 = np.sqrt(1.0 - np.square(g0) - np.square(g1))
-    g0 = 0.*x[0]
-    g1 = 1. + 0.*x[1]
-    g2 = 0.*x[1]
+    sqr = np.square(x[0]) + np.square(x[1])
+    C = 0.6
+    g0 = C * np.sin(0.5 * pi * sqr) * x[0]
+    g1 = C * np.sin(0.5 * pi * sqr) * x[1]
+    g2 = np.sqrt(1.0 - np.square(g0) - np.square(g1))
+    # g0 = 0.0 * x[0]
+    # g1 = 1.0 + 0.0 * x[1]
+    # g2 = 0.0 * x[1]
     return np.stack((g0, g1, g2))
 
 
@@ -35,27 +38,15 @@ def g(x):  # space component noise
 # mesh_filename = join("data/meshes", "disk_2D_3.xdmf")
 fem_order = 1
 bdf_order = 1
-tau = 1.e-2  # Halve time step compared to previous simulation (1.e-2)
 comm = MPI.COMM_SELF
+
+# FE data removed because computed at run-time
+
+# Time stepping data
+tau = 1.0e-2
 n_tt = int(T / tau) + 1
 tt = np.linspace(0, T, n_tt)
 
-# Data removed because computed in h-refinement loop:
-# with XDMFFile(comm, mesh_filename, "r") as xdmf:
-#     msh = xdmf.read_mesh(name="Grid")
-# Pr = element("Lagrange", msh.basix_cell(), fem_order, dtype=default_real_type)
-# Pr3 = element("Lagrange", msh.basix_cell(), fem_order, shape=(3,),
-#               dtype=default_real_type)
-# V = functionspace(msh, Pr)
-# V3 = functionspace(msh, Pr3)
-# m0h = Function(V3)
-# m0h.interpolate(lambda x : m0(x))
-# gh = Function(V3)
-# gh.interpolate(lambda x : g(x))
-# ip_V3 = get_H1_matrix(V3)
-# ip_V = get_L2_matrix(V)
-
-# Import the following!
 data = {
     "m0h": None,
     "alpha": alpha,

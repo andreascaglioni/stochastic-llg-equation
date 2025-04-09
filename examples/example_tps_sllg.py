@@ -10,9 +10,8 @@ from datetime import datetime
 import shutil
 from os.path import join
 import numpy as np
-import matplotlib.pyplot as plt
 from mpi4py import MPI
-from dolfinx.io import XDMFFile
+
 
 sys.path.insert(0, "./")  # Import from this project
 from src.BDF_FEM_TPS import BDF_FEM_TPS

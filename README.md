@@ -53,7 +53,8 @@ exporting solutions to .XDMF files.
    - [ ] Unit testing with Pytest, 
    - [ ] A documentation page, 
    - [ ] High order version of the TPS,
-   - [ ] More examples (external magnetic field, hysteresis, Skyrmions, ...).
+   - [ ] More examples (external magnetic field, hysteresis, Skyrmions, ...),
+   - [ ] Autormated Testing with *GitHub Actions*
 
 ## Contributing
 Contributions are welcome! Please get in touch (see [Contact](#contact)).

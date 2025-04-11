@@ -63,4 +63,5 @@ Contributions are welcome! Please get in touch (see [Contact](#contact)).
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
+If you have any questions, suggestions or comments, please get in touch with me:
 Andrea Scaglioni [andreascaglioni.net/contacts](https://andreascaglioni.net/contacts/)
